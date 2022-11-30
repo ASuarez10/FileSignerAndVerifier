@@ -32,8 +32,10 @@ import javax.crypto.spec.IvParameterSpec;
 
 public class Security {
 	
-	
+	//CONSTNATES A USAR
 	private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
+	
+	private static final String SIG = "SHA1WithRSA";
 			
 	private static final String KEY_ALGORITHM = "RSA";
 
@@ -136,60 +138,61 @@ public class Security {
 		return new IvParameterSpec(iv);
 	}
 	
-	public static void encryptFile(SecretKey key, File inputFile, File outputFile) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, 
+	public static void encryptFileWithKeys(SecretKey key, File inputFile, File outputFile) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, 
 	InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
 
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
 		//AYUDA
 		IvParameterSpec iv = generateIv();
 		cipher.init(Cipher.ENCRYPT_MODE, key, iv);
-		FileInputStream inputStream = new FileInputStream(inputFile);
-		FileOutputStream outputStream = new FileOutputStream(outputFile);
+		FileInputStream fis = new FileInputStream(inputFile);
+		FileOutputStream fos = new FileOutputStream(outputFile);
 		byte[] hash = hash(inputFile);
-		outputStream.write(hash);
+		fos.write(hash);
 		byte[] ivB = iv.getIV();
-		outputStream.write(ivB);
+		fos.write(ivB);
 		byte[] buffer = new byte[64];
 		int bytesRead;
-		while ((bytesRead = inputStream.read(buffer)) != -1) {
+		while ((bytesRead = fis.read(buffer)) != -1) {
 			byte[] output = cipher.update(buffer, 0, bytesRead);
 			if (output != null) {
-				outputStream.write(output);
+				fos.write(output);
 			}
 		}
 		byte[] outputBytes = cipher.doFinal();
 		if (outputBytes != null) {
-			outputStream.write(outputBytes);
+			fos.write(outputBytes);
 		}
-		inputStream.close();
-		outputStream.close();
+		fis.close();
+		fos.close();
 	}
 	
-	
-
 	//VERIFICAR EL DOCUMENTO FIRMADO
-	private static boolean verifyFile(String fileToCheck, String fileSig) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException, IOException {
-		boolean res =false;
-			PublicKey pk = readPublicKey(new File(PUBLIC_KEY_FILE));
-			Signature sig = Signature.getInstance("SHA1withRSA");
-			sig.initVerify(pk);
+	@SuppressWarnings("unused")
+	private static boolean verifyFileSigner(String fileToCheck, String fileSig) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException, IOException {
+	
+			PublicKey pk = readPublicKey(new File("../publicKey"));
+			Signature signatu = Signature.getInstance("SHA1withRSA");
+			signatu.initVerify(pk);
 			
-			FileInputStream sigfis = new FileInputStream(fileSig);
-			byte[] sigFile = new byte[sigfis.available()];
-			sigfis.read(sigFile);
-			sigfis.close();
+			FileInputStream fis = new FileInputStream(fileSig);
+			byte[] sigFile = new byte[fis.available()];
+			fis.read(sigFile);
+			fis.close();
 			
-			FileInputStream datafis = new FileInputStream(fileToCheck);
-			BufferedInputStream bufin = new BufferedInputStream(datafis);
+			FileInputStream fisTwo = new FileInputStream(fileToCheck);
+			BufferedInputStream bis = new BufferedInputStream(fisTwo);
 			byte[] buffer = new byte[1024];
-			int len;
-			while (bufin.available() != 0) {
-			    len = bufin.read(buffer);
-			    sig.update(buffer, 0, len);
-			};
-			bufin.close();
 			
-		return sig.verify(sigFile);
+			int len;
+			while (bis.available() != 0) {
+			    len = bis.read(buffer);
+			    signatu.update(buffer, 0, len);
+			};
+			
+			bis.close();
+			
+		return signatu.verify(sigFile);
 	}
 	
 	//LEER LAS LLAVES PARA VERIFICAR EL DOCUMENTO FIRMADO
@@ -197,68 +200,82 @@ public class Security {
 	//Leer llave pública
 	private static PublicKey readPublicKey(File file) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		byte[] output = null;
+		
 		try(FileInputStream fis = new FileInputStream(file)){
 		   output=fis.readAllBytes();
+		   
 		} catch (IOException e){
 		    e.printStackTrace();
 		}
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		
+		KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
 		
 		X509EncodedKeySpec keySpec = new X509EncodedKeySpec(output);
+		
 		return keyFactory.generatePublic(keySpec);
 	}
 	     
 	//Leer llave privada
 	public static PrivateKey readPrivateKey(byte[] input) throws Exception {
 
-		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		KeyFactory keyFactory = KeyFactory.getInstance(KEY_ALGORITHM);
 		PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(input);
 		return keyFactory.generatePrivate(keySpec);
 	}
 	
 	//FIRMAR EL DOCUMENTO
+	@SuppressWarnings("unused")
 	private static void signFile(String fileToSign, PrivateKey pk) throws InvalidKeyException, NoSuchAlgorithmException, SignatureException, IOException {
-		Signature sig = Signature.getInstance("SHA1WithRSA");
-		sig.initSign(pk);
+		
+		Signature signatu = Signature.getInstance(SIG);
+		signatu.initSign(pk);
+		
 		FileInputStream fis = new FileInputStream(fileToSign);
-		BufferedInputStream bufin = new BufferedInputStream(fis);
+		BufferedInputStream bis = new BufferedInputStream(fis);
 		byte[] buffer = new byte[1024];
+		
 		int len;
-		while ((len = bufin.read(buffer)) >= 0) {
-		    sig.update(buffer, 0, len);
+		while ((len = bis.read(buffer)) >= 0) {
+			signatu.update(buffer, 0, len);
 		};
-		bufin.close();
+		bis.close();
 		
-		byte[] realSig = sig.sign();
+		byte[] realSig = signatu.sign();
 		
-		FileOutputStream sigfos = new FileOutputStream(fileToSign+".sig");
-		sigfos.write(realSig);
-		sigfos.close();
+		FileOutputStream fos = new FileOutputStream(fileToSign+".sig");
+		fos.write(realSig);
+		fos.close();
 	}
 	
 	//Comprobación de la clave de la llave privada para firmar el doc
-	public static byte[] decrypt(SecretKey key, File inputFile) throws NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+	public static byte[] verifyPass(SecretKey key, File inputFile) throws NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
 
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
 		byte[] output = null;
-		try (FileInputStream inputStream = new FileInputStream(inputFile)) {
+		
+		try (FileInputStream fis = new FileInputStream(inputFile)) {
+			
 			byte[] hash = new byte[20];
-			inputStream.read(hash);
+			fis.read(hash);
 			byte[] ivB = new byte[16];
-			inputStream.read(ivB);
+			fis.read(ivB);
 
 			cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(ivB));
 
-			output = cipher.doFinal(inputStream.readAllBytes());
+			output = cipher.doFinal(fis.readAllBytes());
 			byte[] expectedHash = hash(output);
+			
 			for (int i = 0; i < expectedHash.length; i++) {
 				if(hash[i] != expectedHash[i]) {
 					return null;
 				}
 			}
 			return output;
+			
 		} catch (IOException | InvalidKeyException | InvalidAlgorithmParameterException e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
 }// end
