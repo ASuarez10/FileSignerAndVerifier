@@ -1,4 +1,4 @@
-#Informe final de Seguridad
+# Informe final de Seguridad
 Este es el informe del proyecto final del curso Seguridad. Nuestro proyecto fue un firmador de archivos y verificador de firmas.
 
 ### ¿Cómo hicieron el programa?
@@ -8,4 +8,4 @@ Después de esto, nos repartimos el trabajo para poder avanzar mejor. Uno hizo e
 
 Por último realizamos algunas pruebas para verificar que todo estaba funcionando correctamente.
 
-##¿Qué dificultades tuvieron?
+### ¿Qué dificultades tuvieron?
