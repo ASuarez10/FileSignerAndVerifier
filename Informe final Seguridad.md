@@ -21,7 +21,7 @@ Por último realizamos algunas pruebas para verificar que todo estaba funcionand
 * También tuvimos un problema con el encriptado del archivo ya que no queria aceptar la contraseña de ninguna forma. Aparecía un error el cual indicaba que la contraseña debía tener una cantidad de bytes multiplo de 16, pero nunca aceptó nada.
 #### Imagen del error presentado
 
-![](https://github.com/ASuarez10/FileSignerAndVerifier/blob/main/recursos/Error%20Base64.jpeg?raw=true)
+![](https://github.com/ASuarez10/FileSignerAndVerifier/blob/main/recursos/Problem%20with%20the%20password.jpeg?raw=true)
 
 ### Conclusiones
 * Es una experiencia enriquecedora ya que nos permitió entender a fondo cómo funcionan algunas aplicaciones a un nivel de código, también nos permitió aplicar los conocimientos aprendidos durante el semestre en este tema.
