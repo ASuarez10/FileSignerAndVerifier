@@ -16,9 +16,6 @@ import javax.crypto.NoSuchPaddingException;
 import model.Security;
 
 public class Main {
-	
-	private static final String PRIVATE_KEY_FILE = "privateKey";
-	private static final String PUBLIC_KEY_FILE = "publicKey";
 
 	public static void main(String[] args) {
 
@@ -35,59 +32,53 @@ public class Main {
 
 		Security logic = new Security();
 
+		System.out.println("1. Generar llave pública y privada.");
+		System.out.println("2. Firmar documento.");
+		System.out.println("3. Verificar firma del documento.");
+
 		Scanner ansNum = new Scanner(System.in);
 		Scanner ansPass = new Scanner(System.in);
-
-		String pass;
-		System.out.println("BIENVENIDO: ");
-		System.out.println("-------------------OPCIONES-------------------");
-		System.out.println("[1] Generar llave pública y privada.");
-		System.out.println("[2] Firmar documento.");
-		System.out.println("[3] Verificar firma del documento.");
-
 		int answer = ansNum.nextInt();
-		
+
 		switch (answer) {
-		
+
 		case 1:
 
-			System.out.println("Digite la contraseña para la llave privada (Debe tener 16 caracteres):");
-			pass = ansPass.nextLine();
-			logic.keyGenerator(pass);
+			char[] password;
+			System.out.println("Digite la contraseña para la llave privada (Debe tener 16 caracteres)");
+			password = ansPass.nextLine().toCharArray();
+			logic.keyGenerator(password);
 			System.out.println("Las nuevas llaves han sido creadas exitosamente.");
 			menu();
-			
+
 		case 2:
-			
+
 			System.out.println("Digite el nombre del archivo de la clave privada. (Ejemplo: privateKey.cif)");
 			String privateKeyPath = ansPass.nextLine();
-			
-			
-			//File inputFile = new File(PRIVATE_KEY_FILE + ".cif");
+
 			File inputFile = new File(privateKeyPath);
-			System.out.print("Digite la contraseña para desencriptar la clave privada: ");
-			String password = ansPass.nextLine();
+			System.out.print("Digite la contraseña para desencriptar la clave privada");
+			char[] password2 = ansPass.nextLine().toCharArray();
 
 			try {
-				// byte[] output = decrypt(getKeyFromPassword(pass), inputFile);
-				String output = logic.decrypt(inputFile, password);
-				
+				byte[] output = logic.verifyPass(logic.getKeyFromPassword(password2), inputFile);
+
 				if (output != null) {
 
-					System.out.println("Llave privada desencriptada existosamente");
+					System.out.println("Llave privada desencriptada existosamente.");
 
-					PrivateKey pk = logic.stringToPrivateK(output);
-					System.out.print("- Digite el nombre del archivo para firmar: ");
+					PrivateKey pk = logic.convertToPvKey(output);
+					
+					System.out.print("Digite el nombre del archivo para firmar. (Por ejemplo: Test.txt).");
 					String fileToSign = ansPass.nextLine();
 
 					if (new File(fileToSign).exists()) {
 						logic.signFile(fileToSign, pk);
 						System.out.println("Archivo firmado.");
-					}else {
+					} else {
 						System.out.println("Archivo '" + fileToSign + "' NO existe.");
 					}
 				} else {
-					System.out.println("La contraseña es incorrecta.");
 					menu();
 				}
 			} catch (InvalidKeyException | NoSuchPaddingException | NoSuchAlgorithmException
@@ -97,28 +88,45 @@ public class Main {
 			}
 			menu();
 
-//		case 3:
-//			System.out.println("- Digite el nombre del archivo que desea revisar");
-//			String fileToCheck = ansPass.nextLine();
-//
-//			String fileSigner = fileToCheck + ".sig";
-//
-//			try {
-//				if (logic.verifyFileSigner(fileToCheck, fileSigner)) {
-//					System.out.println("-------------> La firma ha sido verificada <-------------");
-//				} else {
-//					System.out.println("-------------> Las llaves no coinciden <-------------");
-//				}
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//
-//			break;
+		case 3:
+			System.out.println("Digite el nombre del archivo que desea revisar. (Por ejemplo: Test.txt)");
+			String fileToCheck = ansPass.nextLine();
+
+			System.out.println("Digite el nombre completo del archivo con la firma. (Por ejemplo: Test.txt.sig)");
+			String sign = ansPass.nextLine();
+
+			System.out.println(
+					"Digite el nombre completo del archivo con la clave pública. (Por ejemplo: publicKey.key)");
+			String publicKeyPath = ansPass.nextLine();
+
+			File pbk = new File(publicKeyPath);
+
+			if (pbk.exists()) {
+
+				try {
+					if (logic.verifyFileSigned(fileToCheck, sign, pbk)) {
+						System.out.println("La firma ha sido verificada");
+						ansPass.close();
+						ansNum.close();
+					} else {
+						System.out.println("Las firma no coincide");
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} else {
+				System.out.println("El archivo de clave publica no existe");
+			}
+
+			break;
 		default:
 			break;
 
 		}
-		ansPass.close();
+//		ansPass.close();
+//		ansNum.close();
 	}
+	
+	
 
 }
